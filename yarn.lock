@@ -3147,7 +3147,7 @@
   dependencies:
     bech32 "^2.0.0"
 
-"@terra-money/terra.js@^3.1.6":
+"@terra-money/terra.js@^3.1.3", "@terra-money/terra.js@^3.1.6":
   version "3.1.10"
   resolved "https://registry.npmjs.org/@terra-money/terra.js/-/terra.js-3.1.10.tgz"
   integrity sha512-MqR16LjTUyVD4HnEavP1iBW0c1roCoRHH/E1x9P44pXzgtv2wsMeP+2un4Bnck4Nkv/46Xvy/BSKiY90ll3BKA==

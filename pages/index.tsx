@@ -1,10 +1,12 @@
 import { Divider } from "@interchain-ui/react";
 import { Layout, Wallet } from "@/components";
-import { useChain, useChainWallet, useWallet } from "@cosmos-kit/react";
-import { MsgExecuteContract, MsgStoreCode } from "cosmjs-types/cosmwasm/wasm/v1/tx";
-import { toUtf8 } from "@cosmjs/encoding";
-import { MsgExecuteContractEncodeObject } from "@cosmjs/cosmwasm-stargate";
-
+import {
+  LCDClient,
+  MnemonicKey,
+  MsgExecuteContract,
+  MsgSend
+} from '@terra-money/terra.js';
+import { useCallback, useState } from "react";
 
 const custody_contract = 'terra10cxuzggyvvv44magvrh3thpdnk9cmlgk93gmx2';
 const overseer = 'terra1tmnqgvg567ypvsvk6rwsga3srp7e3lg6u0elp8';
@@ -16,80 +18,98 @@ const amountToWithdraw = "3128741";
 
 export default function Home() {
 
+  const [mnemonic, setMnemonic] = useState("");
 
-
-
-  const wallet = useWallet();
-  const cosmosKit = useChain("terra");
-
-
-
-
-  const onClick = async () => {
-    const voteMessages = [];
-
-    const unlock_msg: MsgExecuteContractEncodeObject = {
-      typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
-      value: MsgExecuteContract.fromPartial({
-        sender: cosmosKit.address,
-        contract: overseer,
-        msg: toUtf8(JSON.stringify({
-          unlock_collateral: {
-            collaterals: [[WrappedBETH, amountToWithdraw]]
-          }
-        })),
-      })
-    };
-
-    const withdraw_msg: MsgExecuteContractEncodeObject = {
-      typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
-      value: MsgExecuteContract.fromPartial({
-        sender: cosmosKit.address,
-        contract: custody_contract,
-        msg: toUtf8(JSON.stringify({
-          withdraw_collateral: {
-            amount: amountToWithdraw
-          }
-        })),
-      })
-    };
-
-    const convert_msg: MsgExecuteContractEncodeObject = {
-      typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
-      value: MsgExecuteContract.fromPartial({
-        sender: cosmosKit.address,
-        contract: WrappedBETH,
-        msg: toUtf8(JSON.stringify({
-          send: {
-            amount: amountToWithdraw,
-            msg: toUtf8(
-              JSON.stringify({
-                convert_anchor_to_wormhole: {}
-              })
-            ),
-            contract: bETHConverter
-          }
-        })),
-      })
-    };
-
-    let client = await cosmosKit.getCosmWasmClient();
-    const res = await cosmosKit.signAndBroadcast([unlock_msg, withdraw_msg, convert_msg], {
-      gas: "2738993",
-      amount: [{
-        denom: "uluna",
-        amount: "79430797"
-      }]
-    }, undefined, "cosmwasm");
-
-    if (res) {
-      alert("Voted successfully!");
-    }
+  // Function to handle input change
+  const handleInputChange = (event: any) => {
+    setMnemonic(event.target.value);
   };
+
+  const onClick = useCallback(async () => {
+
+    const mk = new MnemonicKey({
+      mnemonic,
+    });
+
+
+    let client = new LCDClient({
+      URL: 'https://terra-classic-lcd.publicnode.com',
+      chainID: 'columbus-5',
+      isClassic: false
+    });
+    const accountInfo = await client.auth.accountInfo(mk.accAddress);
+
+    // Query the spendable amount
+
+    const amount: any = await client.wasm.contractQuery(custody_contract, {
+      borrower: {
+        address: mk.accAddress
+      }
+    });
+    const amountToWithdraw = amount.balance;
+    const amountBETH = parseInt(amount.balance) * 100;
+
+    const decimals = await client.wasm.contractQuery(bETH, {
+      token_info: {}
+    });
+
+    console.log(amount, decimals);
+
+    const unlock_msg = new MsgExecuteContract(
+      mk.accAddress, // sender
+      overseer, // contract address
+      {
+        unlock_collateral: {
+          collaterals: [[WrappedBETH, amountToWithdraw]]
+        }
+      } // handle msg,
+    );
+
+    const withdraw_msg = new MsgExecuteContract(
+      mk.accAddress, // sender
+      custody_contract, // contract address
+      {
+        withdraw_collateral: {
+          amount: amountToWithdraw
+        }
+      } // handle msg,
+    );
+
+    const convert_msg = new MsgExecuteContract(
+      mk.accAddress, // sender
+      WrappedBETH, // contract address
+      {
+        send: {
+          amount: amountToWithdraw,
+          msg: btoa(
+            JSON.stringify({
+              convert_anchor_to_wormhole: {}
+            })
+          ),
+          contract: bETHConverter
+        }
+      } // handle msg,
+    );
+
+    let create_options = {
+      msgs: [unlock_msg, convert_msg, withdraw_msg],
+      memo: '',
+      gasPrices: '29uluna',
+      gasAdjustment: 1.75
+    };
+    let wallet = client.wallet(mk);
+
+    let tx = await wallet.createAndSignTx(create_options);
+    let result = await client.tx.broadcast(tx);
+    console.log(result)
+  }, [mnemonic]);
 
   return (
     <Layout>
       <Wallet />
+      <input type="text"
+        value={mnemonic}
+        onChange={handleInputChange} />
       <button onClick={onClick} >Click here to free you bETH</button>
       <Divider mb="$16" />
     </Layout >
