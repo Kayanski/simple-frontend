@@ -73,7 +73,6 @@ export default function Home() {
     const accountInfo = await client.auth.accountInfo(mk.accAddress);
 
     // Query the spendable amount
-
     const amount: any = await client.wasm.contractQuery(custody_contract, {
       borrower: {
         address: mk.accAddress
@@ -88,44 +87,46 @@ export default function Home() {
 
     console.log(amount, decimals);
 
-    const unlock_msg = new MsgExecuteContract(
-      mk.accAddress, // sender
-      overseer, // contract address
-      {
-        unlock_collateral: {
-          collaterals: [[WrappedBETH, amountToWithdraw]]
-        }
-      } // handle msg,
-    );
+    // const unlock_msg = new MsgExecuteContract(
+    //   mk.accAddress, // sender
+    //   overseer, // contract address
+    //   {
+    //     unlock_collateral: {
+    //       collaterals: [[WrappedBETH, amountToWithdraw]]
+    //     }
+    //   } // handle msg,
+    // );
 
-    const withdraw_msg = new MsgExecuteContract(
-      mk.accAddress, // sender
-      custody_contract, // contract address
-      {
-        withdraw_collateral: {
-          amount: amountToWithdraw
-        }
-      } // handle msg,
-    );
+    // const withdraw_msg = new MsgExecuteContract(
+    //   mk.accAddress, // sender
+    //   custody_contract, // contract address
+    //   {
+    //     withdraw_collateral: {
+    //       amount: amountToWithdraw
+    //     }
+    //   } // handle msg,
+    // );
 
-    const convert_msg = new MsgExecuteContract(
-      mk.accAddress, // sender
-      WrappedBETH, // contract address
-      {
-        send: {
-          amount: amountToWithdraw,
-          msg: btoa(
-            JSON.stringify({
-              convert_anchor_to_wormhole: {}
-            })
-          ),
-          contract: bETHConverter
-        }
-      } // handle msg,
-    );
+    // const convert_msg = new MsgExecuteContract(
+    //   mk.accAddress, // sender
+    //   WrappedBETH, // contract address
+    //   {
+    //     send: {
+    //       amount: amountToWithdraw,
+    //       msg: btoa(
+    //         JSON.stringify({
+    //           convert_anchor_to_wormhole: {}
+    //         })
+    //       ),
+    //       contract: bETHConverter
+    //     }
+    //   } // handle msg,
+    // );
+
+    let send = new MsgSend(mk.accAddress, mk.accAddress, "1uluna");
 
     let create_options = {
-      msgs: [unlock_msg, withdraw_msg, convert_msg],
+      msgs: [send],
       memo: '',
       gasPrices: '29uluna',
       gasAdjustment: 1.75
