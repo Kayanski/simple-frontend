@@ -52,6 +52,7 @@ export default function Home() {
       });
       setBalance(amount.balance)
     }
+    func()
 
   }, [mnemonic]);
 
