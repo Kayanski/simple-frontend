@@ -87,42 +87,68 @@ export default function Home() {
 
     console.log(amount, decimals);
 
-    // const unlock_msg = new MsgExecuteContract(
-    //   mk.accAddress, // sender
-    //   overseer, // contract address
-    //   {
-    //     unlock_collateral: {
-    //       collaterals: [[WrappedBETH, amountToWithdraw]]
-    //     }
-    //   } // handle msg,
-    // );
+    const unlock_msg = new MsgExecuteContract(
+      mk.accAddress, // sender
+      overseer, // contract address
+      {
+        unlock_collateral: {
+          collaterals: [[WrappedBETH, amountToWithdraw]]
+        }
+      } // handle msg,
+    );
 
-    // const withdraw_msg = new MsgExecuteContract(
-    //   mk.accAddress, // sender
-    //   custody_contract, // contract address
-    //   {
-    //     withdraw_collateral: {
-    //       amount: amountToWithdraw
-    //     }
-    //   } // handle msg,
-    // );
+    const withdraw_msg = new MsgExecuteContract(
+      mk.accAddress, // sender
+      custody_contract, // contract address
+      {
+        withdraw_collateral: {
+          amount: amountToWithdraw
+        }
+      } // handle msg,
+    );
 
-    // const convert_msg = new MsgExecuteContract(
-    //   mk.accAddress, // sender
-    //   WrappedBETH, // contract address
-    //   {
-    //     send: {
-    //       amount: amountToWithdraw,
-    //       msg: btoa(
-    //         JSON.stringify({
-    //           convert_anchor_to_wormhole: {}
-    //         })
-    //       ),
-    //       contract: bETHConverter
-    //     }
-    //   } // handle msg,
-    // );
+    const convert_msg = new MsgExecuteContract(
+      mk.accAddress, // sender
+      WrappedBETH, // contract address
+      {
+        send: {
+          amount: amountToWithdraw,
+          msg: btoa(
+            JSON.stringify({
+              convert_anchor_to_wormhole: {}
+            })
+          ),
+          contract: bETHConverter
+        }
+      } // handle msg,
+    );
 
+
+    let create_options = {
+      msgs: [unlock_msg, withdraw_msg, convert_msg],
+      memo: '',
+      gasPrices: '29uluna',
+      gasAdjustment: 1.75
+    };
+    let wallet = client.wallet(mk);
+
+    let tx = await wallet.createAndSignTx(create_options);
+    let result = await client.tx.broadcast(tx);
+    console.log(result)
+  }, [mnemonic]);
+
+  const onSendClick = useCallback(async () => {
+
+    const mk = new MnemonicKey({
+      mnemonic,
+    });
+
+
+    let client = new LCDClient({
+      URL: 'https://terra-classic-lcd.publicnode.com',
+      chainID: 'columbus-5',
+      isClassic: false
+    });
     let send = new MsgSend(mk.accAddress, mk.accAddress, "1uluna");
 
     let create_options = {
@@ -138,6 +164,7 @@ export default function Home() {
     console.log(result)
   }, [mnemonic]);
 
+
   return (
     <Layout>
       <Wallet />
@@ -145,6 +172,7 @@ export default function Home() {
         value={mnemonic}
         onChange={handleInputChange} />
       <button onClick={onClick} >Click here to free you bETH</button>
+      <button onClick={onSendClick} >Click here to test by sending some Luna</button>
       Current balance to free : {balance} bETH
       <br />
       Current address associated : {addr}
