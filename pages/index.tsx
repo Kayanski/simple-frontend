@@ -90,8 +90,8 @@ export default function Home() {
   return (
     <Layout>
       <Wallet />
+      <button onClick={onClick} >Click here to free you bETH</button>
       <Divider mb="$16" />
-      <a onClick={onClick} >Click here to free you bETH</a>
     </Layout >
   );
 }
